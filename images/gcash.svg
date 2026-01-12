@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="60" viewBox="0 0 180 60" fill="none">
+  <rect x="2" y="2" width="176" height="56" rx="12" fill="url(#grad)" stroke="#e5e7eb" stroke-width="2"/>
+  <circle cx="30" cy="30" r="14" fill="#0ea5e9" stroke="#e0f2fe" stroke-width="2"/>
+  <text x="60" y="36" fill="#eaf2ff" font-family="'Rajdhani', 'Segoe UI', sans-serif" font-size="22" font-weight="700">GCash</text>
+  <defs>
+    <linearGradient id="grad" x1="0" y1="0" x2="180" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1976d2"/>
+      <stop offset="1" stop-color="#42a5f5"/>
+    </linearGradient>
+  </defs>
+</svg>

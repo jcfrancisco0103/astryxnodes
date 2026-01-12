@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="60" viewBox="0 0 180 60" fill="none">
+  <rect x="2" y="2" width="176" height="56" rx="12" fill="url(#grad)" stroke="#fef3c7" stroke-width="2"/>
+  <circle cx="30" cy="30" r="14" fill="#f59e0b" stroke="#fff7ed" stroke-width="2"/>
+  <text x="60" y="36" fill="#1f1300" font-family="'Rajdhani', 'Segoe UI', sans-serif" font-size="22" font-weight="700">GoTyme</text>
+  <defs>
+    <linearGradient id="grad" x1="0" y1="0" x2="180" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f59e0b"/>
+      <stop offset="1" stop-color="#fbbf24"/>
+    </linearGradient>
+  </defs>
+</svg>
