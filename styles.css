@@ -820,6 +820,19 @@ section {
     font-size: 1.8rem;
     margin-bottom: 1rem;
     color: var(--primary-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.mob-head {
+    width: 32px;
+    height: 32px;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+    vertical-align: middle;
 }
 
 .plan-price {
