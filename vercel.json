@@ -1,15 +1,5 @@
 {
   "version": 2,
-  "functions": {
-    "server.js": {
-      "includeFiles": [
-        "styles.css",
-        "script.js",
-        "index.html",
-        "images/**"
-      ]
-    }
-  },
   "builds": [
     {
       "src": "server.js",
