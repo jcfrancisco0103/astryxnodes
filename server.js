@@ -41,8 +41,8 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Serve static files (HTML, CSS, JS, images)
-// In Vercel, files are in the same directory as server.js
-const staticPath = __dirname;
+// Use process.cwd() for Vercel compatibility
+const staticPath = process.cwd();
 app.use(express.static(staticPath, {
     extensions: ['html', 'css', 'js', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'ico'],
     index: false
@@ -52,60 +52,116 @@ app.use(express.static(staticPath, {
 const fs = require('fs');
 
 app.get('/styles.css', (req, res) => {
-    const cssPath = path.join(__dirname, 'styles.css');
-    console.log('Serving styles.css from:', cssPath);
-    console.log('File exists:', fs.existsSync(cssPath));
-    res.type('text/css');
-    res.sendFile(cssPath, (err) => {
-        if (err) {
-            console.error('Error serving styles.css:', err);
+    try {
+        // Use process.cwd() as recommended by Vercel
+        const cssPath = path.join(process.cwd(), 'styles.css');
+        
+        if (!fs.existsSync(cssPath)) {
+            console.error('styles.css not found at:', cssPath);
+            console.error('process.cwd():', process.cwd());
             console.error('__dirname:', __dirname);
-            console.error('Files in __dirname:', fs.readdirSync(__dirname));
-            res.status(404).send('/* CSS file not found */');
+            return res.status(404).type('text/css').send('/* CSS file not found */');
         }
-    });
+        
+        const cssContent = fs.readFileSync(cssPath, 'utf8');
+        res.type('text/css');
+        res.send(cssContent);
+    } catch (error) {
+        console.error('Error serving styles.css:', error);
+        res.status(500).type('text/css').send('/* Error loading CSS */');
+    }
 });
 
 app.get('/script.js', (req, res) => {
-    const jsPath = path.join(__dirname, 'script.js');
-    console.log('Serving script.js from:', jsPath);
-    console.log('File exists:', fs.existsSync(jsPath));
-    res.type('application/javascript');
-    res.sendFile(jsPath, (err) => {
-        if (err) {
-            console.error('Error serving script.js:', err);
+    try {
+        // Use process.cwd() as recommended by Vercel
+        const jsPath = path.join(process.cwd(), 'script.js');
+        
+        if (!fs.existsSync(jsPath)) {
+            console.error('script.js not found at:', jsPath);
+            console.error('process.cwd():', process.cwd());
             console.error('__dirname:', __dirname);
-            console.error('Files in __dirname:', fs.readdirSync(__dirname));
-            res.status(404).send('// JS file not found');
+            return res.status(404).type('application/javascript').send('// JS file not found');
         }
-    });
+        
+        const jsContent = fs.readFileSync(jsPath, 'utf8');
+        res.type('application/javascript');
+        res.send(jsContent);
+    } catch (error) {
+        console.error('Error serving script.js:', error);
+        res.status(500).type('application/javascript').send('// Error loading JS');
+    }
 });
 
 // Serve images
-app.use('/images', express.static(path.join(__dirname, 'images')));
+app.get('/images/:filename', (req, res) => {
+    try {
+        const filename = req.params.filename;
+        // Use process.cwd() as recommended by Vercel
+        const imagePath = path.join(process.cwd(), 'images', filename);
+        
+        if (!fs.existsSync(imagePath)) {
+            console.error('Image not found:', filename, 'at:', imagePath);
+            return res.status(404).send('Image not found');
+        }
+        
+        const ext = path.extname(filename).toLowerCase();
+        const contentType = {
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.gif': 'image/gif',
+            '.svg': 'image/svg+xml',
+            '.ico': 'image/x-icon'
+        }[ext] || 'application/octet-stream';
+        
+        const imageContent = fs.readFileSync(imagePath);
+        res.type(contentType);
+        res.send(imageContent);
+    } catch (error) {
+        console.error('Error serving image:', error);
+        res.status(500).send('Error loading image');
+    }
+});
 
 // Debug route to check file structure
 app.get('/debug/files', (req, res) => {
     try {
-        const files = fs.readdirSync(__dirname);
-        res.json({
-            __dirname: __dirname,
-            files: files,
-            stylesExists: fs.existsSync(path.join(__dirname, 'styles.css')),
-            scriptExists: fs.existsSync(path.join(__dirname, 'script.js')),
-            imagesExists: fs.existsSync(path.join(__dirname, 'images'))
-        });
+        const cwd = process.cwd();
+        const dirname = __dirname;
+        
+        const result = {
+            process_cwd: cwd,
+            __dirname: dirname,
+            cwd_files: fs.existsSync(cwd) ? fs.readdirSync(cwd) : 'not found',
+            dirname_files: fs.existsSync(dirname) ? fs.readdirSync(dirname) : 'not found',
+            styles_css: {
+                cwd: fs.existsSync(path.join(cwd, 'styles.css')),
+                dirname: fs.existsSync(path.join(dirname, 'styles.css'))
+            },
+            script_js: {
+                cwd: fs.existsSync(path.join(cwd, 'script.js')),
+                dirname: fs.existsSync(path.join(dirname, 'script.js'))
+            },
+            images: {
+                cwd: fs.existsSync(path.join(cwd, 'images')),
+                dirname: fs.existsSync(path.join(dirname, 'images'))
+            }
+        };
+        
+        res.json(result);
     } catch (error) {
-        res.json({ error: error.message });
+        res.json({ error: error.message, stack: error.stack });
     }
 });
 
 // Route for home page
 app.get('/', (req, res) => {
-    const indexPath = path.join(__dirname, 'index.html');
+    const indexPath = path.join(process.cwd(), 'index.html');
     res.sendFile(indexPath, (err) => {
         if (err) {
             console.error('Error serving index.html:', err);
+            console.error('process.cwd():', process.cwd());
             res.status(500).send('Error loading page');
         }
     });
