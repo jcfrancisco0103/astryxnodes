@@ -1,4 +1,18 @@
-require('dotenv').config();
+// Top-level error handler
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+try {
+    require('dotenv').config();
+} catch (error) {
+    console.error('Error loading dotenv:', error);
+}
+
 const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
@@ -27,25 +41,24 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Serve static files (HTML, CSS, JS, images)
-// In Vercel, __dirname might not work as expected, so we handle both cases
-try {
-    app.use(express.static(path.join(__dirname)));
-} catch (error) {
-    console.error('Error setting up static files:', error);
-    // Fallback for Vercel
-    app.use(express.static('.'));
-}
+// Handle both local and Vercel environments
+const staticPath = process.env.VERCEL ? path.resolve('.') : path.join(__dirname);
+app.use(express.static(staticPath, {
+    extensions: ['html', 'css', 'js', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'ico']
+}));
 
 // Route for home page
 app.get('/', (req, res) => {
-    try {
-        const indexPath = path.join(__dirname, 'index.html');
-        res.sendFile(indexPath);
-    } catch (error) {
-        console.error('Error serving index.html:', error);
-        // Fallback for Vercel
-        res.sendFile(path.resolve('index.html'));
-    }
+    const indexPath = process.env.VERCEL 
+        ? path.resolve('index.html') 
+        : path.join(__dirname, 'index.html');
+    
+    res.sendFile(indexPath, (err) => {
+        if (err) {
+            console.error('Error serving index.html:', err);
+            res.status(500).send('Error loading page');
+        }
+    });
 });
 
 // Helper function to send order to sales API
