@@ -1,8 +1,21 @@
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const bodyParser = require('body-parser');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_...'); // Replace with your Stripe secret key
+const https = require('https');
+const http = require('http');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Sales API Configuration
+const SALES_API_URL = process.env.SALES_API_URL || 'http://localhost:3020';
+const SALES_API_KEY = process.env.SALES_API_KEY;
+
+// Middleware
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // Serve static files (HTML, CSS, JS, images)
 app.use(express.static(path.join(__dirname)));
@@ -10,6 +23,263 @@ app.use(express.static(path.join(__dirname)));
 // Route for home page
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Helper function to send order to sales API
+async function sendOrderToSales(orderData) {
+    // Only send if API key is configured
+    if (!SALES_API_KEY) {
+        console.log('Sales API key not configured. Skipping order sync to sales website.');
+        return { success: false, error: 'Sales API not configured' };
+    }
+
+    try {
+        // Map order status from astryxnodes format to sales format
+        const statusMap = {
+            'pending_payment': 'Pending',
+            'completed': 'Paid'
+        };
+        
+        // Map payment method names
+        const paymentMethodMap = {
+            'stripe': 'Stripe',
+            'gcash': 'GCash',
+            'maya': 'Maya',
+            'bank': 'Bank Transfer'
+        };
+
+        // Get current date in YYYY-MM-DD format
+        const today = new Date();
+        const dateBought = today.toISOString().split('T')[0];
+        
+        // Calculate expiry date (default to 1 month)
+        const expiryDate = new Date(today);
+        expiryDate.setMonth(expiryDate.getMonth() + 1);
+        const dateExpiry = expiryDate.toISOString().split('T')[0];
+
+        // Prepare sales data
+        const salesData = {
+            date_bought: dateBought,
+            duration: '1 month', // Default duration
+            date_expiry: dateExpiry,
+            customer_name: orderData.customer.name,
+            plan: orderData.plan,
+            cpu: orderData.specs.cpu,
+            ram: orderData.specs.ram,
+            disk: orderData.specs.disk,
+            amount: parseFloat(orderData.price),
+            payment_method: paymentMethodMap[orderData.paymentMethod] || orderData.paymentMethod,
+            status: statusMap[orderData.status] || 'Pending'
+        };
+
+        // Make HTTP request to sales API
+        const url = new URL(`${SALES_API_URL}/api/sales/auto`);
+        const requestModule = url.protocol === 'https:' ? https : http;
+        
+        const postData = JSON.stringify(salesData);
+        
+        const options = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(postData),
+                'X-API-Key': SALES_API_KEY
+            }
+        };
+
+        return new Promise((resolve, reject) => {
+            const req = requestModule.request(url, options, (res) => {
+                let data = '';
+                
+                res.on('data', (chunk) => {
+                    data += chunk;
+                });
+                
+                res.on('end', () => {
+                    if (res.statusCode >= 200 && res.statusCode < 300) {
+                        try {
+                            const response = JSON.parse(data);
+                            console.log('Order successfully sent to sales API:', response);
+                            resolve({ success: true, response });
+                        } catch (e) {
+                            console.error('Error parsing sales API response:', e);
+                            resolve({ success: false, error: 'Invalid response from sales API' });
+                        }
+                    } else {
+                        console.error('Sales API returned error status:', res.statusCode, data);
+                        resolve({ success: false, error: `Sales API error: ${res.statusCode}` });
+                    }
+                });
+            });
+            
+            req.on('error', (error) => {
+                console.error('Error sending order to sales API:', error);
+                resolve({ success: false, error: error.message });
+            });
+            
+            req.write(postData);
+            req.end();
+        });
+    } catch (error) {
+        console.error('Error preparing order for sales API:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// Payment Configuration (Update these with your actual payment details)
+const PAYMENT_CONFIG = {
+    gcash: {
+        number: process.env.GCASH_NUMBER || '09123456789', // Replace with your GCash number
+    },
+    maya: {
+        number: process.env.MAYA_NUMBER || '09123456789', // Replace with your Maya number
+    },
+    bank: {
+        name: process.env.BANK_NAME || 'Bank Name', // Replace with your bank name
+        accountName: process.env.BANK_ACCOUNT_NAME || 'Account Name', // Replace with account name
+        accountNumber: process.env.BANK_ACCOUNT_NUMBER || '1234567890', // Replace with account number
+    }
+};
+
+// API: Create Stripe Payment Intent
+app.post('/api/create-payment-intent', async (req, res) => {
+    try {
+        const { amount, currency, customer, order } = req.body;
+        
+        if (!amount || amount <= 0) {
+            return res.status(400).json({ error: 'Invalid amount' });
+        }
+        
+        // Create payment intent
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(amount), // Amount in cents
+            currency: currency || 'php',
+            metadata: {
+                plan: order.plan,
+                customer_name: customer.name,
+                customer_email: customer.email,
+            },
+            description: `Minecraft Server - ${order.plan}`,
+        });
+        
+        res.json({
+            clientSecret: paymentIntent.client_secret,
+        });
+    } catch (error) {
+        console.error('Stripe error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// API: Create Order (for manual payment methods)
+app.post('/api/create-order', async (req, res) => {
+    try {
+        const { name, email, phone, discord, paymentMethod, order, orderNumber, status } = req.body;
+        
+        // Validate required fields
+        if (!name || !email || !phone || !paymentMethod || !order) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+        
+        // Here you would typically save the order to a database
+        // For now, we'll just log it and return success
+        const orderData = {
+            orderNumber,
+            customer: {
+                name,
+                email,
+                phone,
+                discord: discord || null,
+            },
+            plan: order.plan,
+            price: order.price,
+            specs: {
+                ram: order.ram,
+                cpu: order.cpu,
+                disk: order.disk,
+            },
+            paymentMethod,
+            status: status || 'pending_payment',
+            createdAt: new Date().toISOString(),
+        };
+        
+        // TODO: Save to database
+        console.log('New order created:', orderData);
+        
+        // Send order to sales API
+        await sendOrderToSales(orderData);
+        
+        // TODO: Send confirmation email to customer
+        // TODO: Send notification to admin
+        
+        res.json({
+            success: true,
+            orderNumber,
+            order: orderData,
+        });
+    } catch (error) {
+        console.error('Order creation error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// API: Complete Order (for successful Stripe payments)
+app.post('/api/complete-order', async (req, res) => {
+    try {
+        const { name, email, phone, discord, paymentMethod, order, orderNumber, paymentId, status } = req.body;
+        
+        const orderData = {
+            orderNumber,
+            customer: {
+                name,
+                email,
+                phone,
+                discord: discord || null,
+            },
+            plan: order.plan,
+            price: order.price,
+            specs: {
+                ram: order.ram,
+                cpu: order.cpu,
+                disk: order.disk,
+            },
+            paymentMethod: paymentMethod || 'stripe',
+            paymentId,
+            status: status || 'completed',
+            createdAt: new Date().toISOString(),
+        };
+        
+        // TODO: Save to database
+        console.log('Order completed:', orderData);
+        
+        // Send order to sales API
+        await sendOrderToSales(orderData);
+        
+        // TODO: Send confirmation email
+        // TODO: Provision server
+        // TODO: Send server details to customer
+        
+        res.json({
+            success: true,
+            orderNumber,
+            order: orderData,
+        });
+    } catch (error) {
+        console.error('Order completion error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// API: Get Payment Configuration (for frontend)
+app.get('/api/payment-config', (req, res) => {
+    res.json(PAYMENT_CONFIG);
+});
+
+// API: Get Stripe Publishable Key (for frontend)
+app.get('/api/stripe-key', (req, res) => {
+    res.json({
+        publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || ''
+    });
 });
 
 // Handle 404

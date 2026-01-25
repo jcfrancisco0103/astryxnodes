@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Stripe.js -->
+    <script src="https://js.stripe.com/v3/"></script>
 </head>
 <body>
     <!-- Background Image -->
@@ -199,7 +201,7 @@
                             <li>✓ Daily Backups</li>
                             <li>✓ 24/7 Support</li>
                         </ul>
-                        
+                        <button class="btn btn-primary btn-buy" data-plan="Pig-Plan" data-price="85" data-ram="2GB" data-cpu="100%" data-disk="5GB">Buy Now</button>
                     </div>
 
                     <div class="pricing-card">
@@ -221,7 +223,7 @@
                             <li>✓ Daily Backups</li>
                             <li>✓ 24/7 Support</li>
                         </ul>
-                        
+                        <button class="btn btn-primary btn-buy" data-plan="Sheep-Plan" data-price="140" data-ram="4GB" data-cpu="100%" data-disk="10GB">Buy Now</button>
                     </div>
 
                     <div class="pricing-card">
@@ -243,7 +245,7 @@
                             <li>✓ Daily Backups</li>
                             <li>✓ 24/7 Support</li>
                         </ul>
-                        
+                        <button class="btn btn-primary btn-buy" data-plan="Cow-Plan" data-price="225" data-ram="6GB" data-cpu="150%" data-disk="20GB">Buy Now</button>
                     </div>
                 </div>
             </div>
@@ -274,7 +276,7 @@
                             <li>✓ Hourly Backups</li>
                             <li>✓ Priority Support</li>
                         </ul>
-                        
+                        <button class="btn btn-primary btn-buy" data-plan="Creeper-Plan" data-price="379" data-ram="8GB" data-cpu="150%" data-disk="30GB">Buy Now</button>
                     </div>
 
                     <div class="pricing-card featured">
@@ -298,7 +300,7 @@
                             <li>✓ Priority Support</li>
                             <li>✓ Free Subdomain</li>
                         </ul>
-                        
+                        <button class="btn btn-primary btn-buy" data-plan="Zombie-Plan" data-price="459" data-ram="10GB" data-cpu="200%" data-disk="35GB">Buy Now</button>
                     </div>
 
                     <div class="pricing-card">
@@ -321,7 +323,7 @@
                             <li>✓ Priority Support</li>
                             <li>✓ Free Subdomain</li>
                         </ul>
-                        
+                        <button class="btn btn-primary btn-buy" data-plan="Skeleton-Plan" data-price="549" data-ram="12GB" data-cpu="250%" data-disk="40GB">Buy Now</button>
                     </div>
                 </div>
             </div>
@@ -377,6 +379,164 @@
                     <summary>Read more</summary>
                     <p>Eligible refunds apply to first-time purchases within a day. Add-ons, domains, and one-time setup fees are non-refundable. We aim to resolve issues via support first; refunds are processed to the original payment method when eligible.</p>
                 </details>
+            </div>
+        </div>
+
+        <!-- Success/Error Message Modal -->
+        <div id="messageModal" class="modal message-modal">
+            <div class="modal-content message-content">
+                <button class="modal-close" aria-label="Close modal">✕</button>
+                <div id="message-icon" class="message-icon"></div>
+                <h2 id="message-title"></h2>
+                <div id="message-body" class="message-body"></div>
+                <div class="message-actions">
+                    <button class="btn btn-primary" id="message-ok-btn">OK</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Checkout Modal -->
+        <div id="checkoutModal" class="modal checkout-modal">
+            <div class="modal-content checkout-content">
+                <button class="modal-close" aria-label="Close modal">✕</button>
+                <h2>Complete Your Purchase</h2>
+                
+                <!-- Order Summary -->
+                <div class="checkout-section">
+                    <h3>Order Summary</h3>
+                    <div class="order-summary">
+                        <div class="summary-item">
+                            <span class="summary-label">Plan:</span>
+                            <span class="summary-value" id="checkout-plan-name">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">RAM:</span>
+                            <span class="summary-value" id="checkout-ram">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">CPU:</span>
+                            <span class="summary-value" id="checkout-cpu">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Disk:</span>
+                            <span class="summary-value" id="checkout-disk">-</span>
+                        </div>
+                        <div class="summary-item total">
+                            <span class="summary-label">Total:</span>
+                            <span class="summary-value">₱<span id="checkout-price">0</span>/month</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customer Information -->
+                <div class="checkout-section">
+                    <h3>Your Information</h3>
+                    <form id="checkout-form">
+                        <div class="form-group">
+                            <label for="customer-name">Full Name *</label>
+                            <input type="text" id="customer-name" name="name" required placeholder="John Doe">
+                        </div>
+                        <div class="form-group">
+                            <label for="customer-email">Email Address *</label>
+                            <input type="email" id="customer-email" name="email" required placeholder="john@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="customer-phone">Phone Number *</label>
+                            <input type="tel" id="customer-phone" name="phone" required placeholder="+63 912 345 6789">
+                        </div>
+                        <div class="form-group">
+                            <label for="customer-discord">Discord Username (Optional)</label>
+                            <input type="text" id="customer-discord" name="discord" placeholder="username#1234">
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Payment Method Selection -->
+                <div class="checkout-section">
+                    <h3>Payment Method</h3>
+                    <div class="payment-methods">
+                        <div class="payment-option" data-method="gcash">
+                            <input type="radio" id="pay-gcash" name="payment-method" value="gcash" required>
+                            <label for="pay-gcash">
+                                <span class="payment-icon">💳</span>
+                                <span class="payment-name">GCash</span>
+                            </label>
+                        </div>
+                        <div class="payment-option" data-method="maya">
+                            <input type="radio" id="pay-maya" name="payment-method" value="maya" required>
+                            <label for="pay-maya">
+                                <span class="payment-icon">💳</span>
+                                <span class="payment-name">Maya (PayMaya)</span>
+                            </label>
+                        </div>
+                        <div class="payment-option" data-method="bank">
+                            <input type="radio" id="pay-bank" name="payment-method" value="bank" required>
+                            <label for="pay-bank">
+                                <span class="payment-icon">🏦</span>
+                                <span class="payment-name">Bank Transfer</span>
+                            </label>
+                        </div>
+                        <div class="payment-option" data-method="stripe">
+                            <input type="radio" id="pay-stripe" name="payment-method" value="stripe" required>
+                            <label for="pay-stripe">
+                                <span class="payment-icon">💳</span>
+                                <span class="payment-name">Credit/Debit Card (Stripe)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Payment Instructions (shown based on selection) -->
+                    <div id="payment-instructions" class="payment-instructions" style="display: none;">
+                        <div id="gcash-instructions" class="payment-details" style="display: none;">
+                            <h4>GCash Payment Instructions</h4>
+                            <p><strong>GCash Number:</strong> <span id="gcash-number">[Your GCash Number]</span></p>
+                            <p><strong>Amount:</strong> ₱<span id="gcash-amount">0</span></p>
+                            <p>Please send the exact amount to the GCash number above. Include your order number in the reference/message.</p>
+                        </div>
+                        <div id="maya-instructions" class="payment-details" style="display: none;">
+                            <h4>Maya Payment Instructions</h4>
+                            <p><strong>Maya Number:</strong> <span id="maya-number">[Your Maya Number]</span></p>
+                            <p><strong>Amount:</strong> ₱<span id="maya-amount">0</span></p>
+                            <p>Please send the exact amount to the Maya number above. Include your order number in the reference/message.</p>
+                        </div>
+                        <div id="bank-instructions" class="payment-details" style="display: none;">
+                            <h4>Bank Transfer Instructions</h4>
+                            <p><strong>Bank Name:</strong> <span id="bank-name">[Your Bank Name]</span></p>
+                            <p><strong>Account Name:</strong> <span id="bank-account-name">[Account Name]</span></p>
+                            <p><strong>Account Number:</strong> <span id="bank-account-number">[Account Number]</span></p>
+                            <p><strong>Amount:</strong> ₱<span id="bank-amount">0</span></p>
+                            <p>Please transfer the exact amount to the account above. Include your order number in the transaction reference.</p>
+                        </div>
+                        <div id="stripe-instructions" class="payment-details" style="display: none;">
+                            <h4>Secure Card Payment</h4>
+                            <p>You will be redirected to a secure payment page to complete your transaction.</p>
+                            <div id="stripe-card-element" style="margin-top: 1rem;">
+                                <!-- Stripe Elements will be inserted here -->
+                            </div>
+                            <div id="stripe-card-errors" role="alert" style="color: #e74c3c; margin-top: 0.5rem;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Terms Agreement -->
+                <div class="checkout-section">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="agree-terms" required>
+                        <span>I agree to the <a href="#" class="policy-link" data-modal="tosModal">Terms of Service</a> and <a href="#" class="policy-link" data-modal="privacyModal">Privacy Policy</a> *</span>
+                    </label>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="checkout-actions">
+                    <button type="button" class="btn btn-outline" id="cancel-checkout">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="submit-checkout" form="checkout-form">Complete Purchase</button>
+                </div>
+
+                <!-- Loading State -->
+                <div id="checkout-loading" class="checkout-loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Processing your order...</p>
+                </div>
             </div>
         </div>
 
