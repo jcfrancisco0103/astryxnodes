@@ -40,30 +40,23 @@ const SALES_API_KEY = process.env.SALES_API_KEY;
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Serve static files (HTML, CSS, JS, images)
-// Use process.cwd() for Vercel compatibility
-const staticPath = process.cwd();
-app.use(express.static(staticPath, {
-    extensions: ['html', 'css', 'js', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'ico'],
-    index: false
-}));
-
-// Explicit routes for static files (for Vercel)
+// Explicit routes for static files (MUST be before express.static)
 const fs = require('fs');
 
 app.get('/styles.css', (req, res) => {
+    console.log('styles.css route hit');
     try {
         // Use process.cwd() as recommended by Vercel
         const cssPath = path.join(process.cwd(), 'styles.css');
+        console.log('Reading CSS from:', cssPath);
         
         if (!fs.existsSync(cssPath)) {
             console.error('styles.css not found at:', cssPath);
-            console.error('process.cwd():', process.cwd());
-            console.error('__dirname:', __dirname);
             return res.status(404).type('text/css').send('/* CSS file not found */');
         }
         
         const cssContent = fs.readFileSync(cssPath, 'utf8');
+        console.log('CSS file read successfully, length:', cssContent.length);
         res.type('text/css');
         res.send(cssContent);
     } catch (error) {
@@ -73,18 +66,19 @@ app.get('/styles.css', (req, res) => {
 });
 
 app.get('/script.js', (req, res) => {
+    console.log('script.js route hit');
     try {
         // Use process.cwd() as recommended by Vercel
         const jsPath = path.join(process.cwd(), 'script.js');
+        console.log('Reading JS from:', jsPath);
         
         if (!fs.existsSync(jsPath)) {
             console.error('script.js not found at:', jsPath);
-            console.error('process.cwd():', process.cwd());
-            console.error('__dirname:', __dirname);
             return res.status(404).type('application/javascript').send('// JS file not found');
         }
         
         const jsContent = fs.readFileSync(jsPath, 'utf8');
+        console.log('JS file read successfully, length:', jsContent.length);
         res.type('application/javascript');
         res.send(jsContent);
     } catch (error) {
