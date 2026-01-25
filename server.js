@@ -47,6 +47,17 @@ app.use(express.static(staticPath, {
     extensions: ['html', 'css', 'js', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'ico']
 }));
 
+// Explicit routes for static files (fallback for Vercel)
+app.get('/styles.css', (req, res) => {
+    const cssPath = process.env.VERCEL ? path.resolve('styles.css') : path.join(__dirname, 'styles.css');
+    res.sendFile(cssPath, { headers: { 'Content-Type': 'text/css' } });
+});
+
+app.get('/script.js', (req, res) => {
+    const jsPath = process.env.VERCEL ? path.resolve('script.js') : path.join(__dirname, 'script.js');
+    res.sendFile(jsPath, { headers: { 'Content-Type': 'application/javascript' } });
+});
+
 // Route for home page
 app.get('/', (req, res) => {
     const indexPath = process.env.VERCEL 
