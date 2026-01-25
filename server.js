@@ -40,6 +40,12 @@ const SALES_API_KEY = process.env.SALES_API_KEY;
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Log all requests for debugging
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+    next();
+});
+
 // Explicit routes for static files (MUST be before express.static)
 const fs = require('fs');
 
@@ -116,6 +122,11 @@ app.get('/images/:filename', (req, res) => {
         console.error('Error serving image:', error);
         res.status(500).send('Error loading image');
     }
+});
+
+// Test route to verify routing works
+app.get('/test-static', (req, res) => {
+    res.json({ message: 'Static file routing is working', timestamp: new Date().toISOString() });
 });
 
 // Debug route to check file structure
