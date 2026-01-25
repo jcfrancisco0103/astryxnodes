@@ -41,27 +41,47 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Serve static files (HTML, CSS, JS, images)
-// Handle both local and Vercel environments
-const staticPath = process.env.VERCEL ? path.resolve('.') : path.join(__dirname);
+// In Vercel, we need to serve files from the correct path
+const staticPath = process.env.VERCEL ? path.resolve(process.cwd()) : path.join(__dirname);
 app.use(express.static(staticPath, {
-    extensions: ['html', 'css', 'js', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'ico']
+    extensions: ['html', 'css', 'js', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'ico'],
+    index: false
 }));
 
-// Explicit routes for static files (fallback for Vercel)
+// Explicit routes for static files (for Vercel)
 app.get('/styles.css', (req, res) => {
-    const cssPath = process.env.VERCEL ? path.resolve('styles.css') : path.join(__dirname, 'styles.css');
-    res.sendFile(cssPath, { headers: { 'Content-Type': 'text/css' } });
+    const cssPath = process.env.VERCEL 
+        ? path.join(process.cwd(), 'styles.css')
+        : path.join(__dirname, 'styles.css');
+    res.type('text/css');
+    res.sendFile(cssPath, (err) => {
+        if (err) {
+            console.error('Error serving styles.css:', err);
+            res.status(404).send('/* CSS file not found */');
+        }
+    });
 });
 
 app.get('/script.js', (req, res) => {
-    const jsPath = process.env.VERCEL ? path.resolve('script.js') : path.join(__dirname, 'script.js');
-    res.sendFile(jsPath, { headers: { 'Content-Type': 'application/javascript' } });
+    const jsPath = process.env.VERCEL 
+        ? path.join(process.cwd(), 'script.js')
+        : path.join(__dirname, 'script.js');
+    res.type('application/javascript');
+    res.sendFile(jsPath, (err) => {
+        if (err) {
+            console.error('Error serving script.js:', err);
+            res.status(404).send('// JS file not found');
+        }
+    });
 });
+
+// Serve images
+app.use('/images', express.static(path.join(staticPath, 'images')));
 
 // Route for home page
 app.get('/', (req, res) => {
     const indexPath = process.env.VERCEL 
-        ? path.resolve('index.html') 
+        ? path.join(process.cwd(), 'index.html')
         : path.join(__dirname, 'index.html');
     
     res.sendFile(indexPath, (err) => {
