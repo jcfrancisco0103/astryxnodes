@@ -2,12 +2,21 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_...'); // Replace with your Stripe secret key
 const https = require('https');
 const http = require('http');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Initialize Stripe (only if key is provided)
+let stripe = null;
+if (process.env.STRIPE_SECRET_KEY) {
+    try {
+        stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    } catch (error) {
+        console.error('Error initializing Stripe:', error);
+    }
+}
 
 // Sales API Configuration
 const SALES_API_URL = process.env.SALES_API_URL || 'http://localhost:3020';
@@ -18,11 +27,25 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Serve static files (HTML, CSS, JS, images)
-app.use(express.static(path.join(__dirname)));
+// In Vercel, __dirname might not work as expected, so we handle both cases
+try {
+    app.use(express.static(path.join(__dirname)));
+} catch (error) {
+    console.error('Error setting up static files:', error);
+    // Fallback for Vercel
+    app.use(express.static('.'));
+}
 
 // Route for home page
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    try {
+        const indexPath = path.join(__dirname, 'index.html');
+        res.sendFile(indexPath);
+    } catch (error) {
+        console.error('Error serving index.html:', error);
+        // Fallback for Vercel
+        res.sendFile(path.resolve('index.html'));
+    }
 });
 
 // Helper function to send order to sales API
@@ -144,6 +167,10 @@ const PAYMENT_CONFIG = {
 // API: Create Stripe Payment Intent
 app.post('/api/create-payment-intent', async (req, res) => {
     try {
+        if (!stripe) {
+            return res.status(500).json({ error: 'Stripe is not configured. Please set STRIPE_SECRET_KEY environment variable.' });
+        }
+        
         const { amount, currency, customer, order } = req.body;
         
         if (!amount || amount <= 0) {
@@ -167,7 +194,7 @@ app.post('/api/create-payment-intent', async (req, res) => {
         });
     } catch (error) {
         console.error('Stripe error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: error.message || 'Stripe payment intent creation failed' });
     }
 });
 
@@ -279,6 +306,24 @@ app.get('/api/payment-config', (req, res) => {
 app.get('/api/stripe-key', (req, res) => {
     res.json({
         publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || ''
+    });
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        environment: process.env.VERCEL ? 'vercel' : 'local'
+    });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Error:', err);
+    res.status(500).json({
+        error: 'Internal Server Error',
+        message: process.env.NODE_ENV === 'production' ? 'An error occurred' : err.message
     });
 });
 
