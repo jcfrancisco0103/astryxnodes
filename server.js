@@ -41,49 +41,68 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Serve static files (HTML, CSS, JS, images)
-// In Vercel, we need to serve files from the correct path
-const staticPath = process.env.VERCEL ? path.resolve(process.cwd()) : path.join(__dirname);
+// In Vercel, files are in the same directory as server.js
+const staticPath = __dirname;
 app.use(express.static(staticPath, {
     extensions: ['html', 'css', 'js', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'ico'],
     index: false
 }));
 
 // Explicit routes for static files (for Vercel)
+const fs = require('fs');
+
 app.get('/styles.css', (req, res) => {
-    const cssPath = process.env.VERCEL 
-        ? path.join(process.cwd(), 'styles.css')
-        : path.join(__dirname, 'styles.css');
+    const cssPath = path.join(__dirname, 'styles.css');
+    console.log('Serving styles.css from:', cssPath);
+    console.log('File exists:', fs.existsSync(cssPath));
     res.type('text/css');
     res.sendFile(cssPath, (err) => {
         if (err) {
             console.error('Error serving styles.css:', err);
+            console.error('__dirname:', __dirname);
+            console.error('Files in __dirname:', fs.readdirSync(__dirname));
             res.status(404).send('/* CSS file not found */');
         }
     });
 });
 
 app.get('/script.js', (req, res) => {
-    const jsPath = process.env.VERCEL 
-        ? path.join(process.cwd(), 'script.js')
-        : path.join(__dirname, 'script.js');
+    const jsPath = path.join(__dirname, 'script.js');
+    console.log('Serving script.js from:', jsPath);
+    console.log('File exists:', fs.existsSync(jsPath));
     res.type('application/javascript');
     res.sendFile(jsPath, (err) => {
         if (err) {
             console.error('Error serving script.js:', err);
+            console.error('__dirname:', __dirname);
+            console.error('Files in __dirname:', fs.readdirSync(__dirname));
             res.status(404).send('// JS file not found');
         }
     });
 });
 
 // Serve images
-app.use('/images', express.static(path.join(staticPath, 'images')));
+app.use('/images', express.static(path.join(__dirname, 'images')));
+
+// Debug route to check file structure
+app.get('/debug/files', (req, res) => {
+    try {
+        const files = fs.readdirSync(__dirname);
+        res.json({
+            __dirname: __dirname,
+            files: files,
+            stylesExists: fs.existsSync(path.join(__dirname, 'styles.css')),
+            scriptExists: fs.existsSync(path.join(__dirname, 'script.js')),
+            imagesExists: fs.existsSync(path.join(__dirname, 'images'))
+        });
+    } catch (error) {
+        res.json({ error: error.message });
+    }
+});
 
 // Route for home page
 app.get('/', (req, res) => {
-    const indexPath = process.env.VERCEL 
-        ? path.join(process.cwd(), 'index.html')
-        : path.join(__dirname, 'index.html');
-    
+    const indexPath = path.join(__dirname, 'index.html');
     res.sendFile(indexPath, (err) => {
         if (err) {
             console.error('Error serving index.html:', err);
