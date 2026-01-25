@@ -287,9 +287,10 @@ app.use((req, res) => {
     res.status(404).send('404 - Page Not Found');
 });
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`
+// Start server (only if not in serverless environment)
+if (process.env.VERCEL !== '1') {
+    app.listen(PORT, () => {
+        console.log(`
     ╔══════════════════════════════════════════════╗
     ║                                              ║
     ║        🌌 AstryxNodes Server Running 🌌      ║
@@ -300,12 +301,14 @@ app.listen(PORT, () => {
     ║                                              ║
     ╚══════════════════════════════════════════════╝
     `);
-});
-
-// Handle graceful shutdown
-process.on('SIGTERM', () => {
-    console.log('SIGTERM signal received: closing HTTP server');
-    server.close(() => {
-        console.log('HTTP server closed');
     });
-});
+
+    // Handle graceful shutdown
+    process.on('SIGTERM', () => {
+        console.log('SIGTERM signal received: closing HTTP server');
+        process.exit(0);
+    });
+}
+
+// Export for Vercel serverless
+module.exports = app;
