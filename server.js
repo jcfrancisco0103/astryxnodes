@@ -40,88 +40,41 @@ const SALES_API_KEY = process.env.SALES_API_KEY;
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Log all requests for debugging
-app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-    next();
-});
 
 // Explicit routes for static files (MUST be before express.static)
 const fs = require('fs');
 
 app.get('/styles.css', (req, res) => {
-    console.log('styles.css route hit');
-    try {
-        // Use process.cwd() as recommended by Vercel
-        const cssPath = path.join(process.cwd(), 'styles.css');
-        console.log('Reading CSS from:', cssPath);
-        
-        if (!fs.existsSync(cssPath)) {
-            console.error('styles.css not found at:', cssPath);
-            return res.status(404).type('text/css').send('/* CSS file not found */');
-        }
-        
-        const cssContent = fs.readFileSync(cssPath, 'utf8');
-        console.log('CSS file read successfully, length:', cssContent.length);
-        res.type('text/css');
-        res.send(cssContent);
-    } catch (error) {
-        console.error('Error serving styles.css:', error);
-        res.status(500).type('text/css').send('/* Error loading CSS */');
-    }
+    const cssPath = path.join(process.cwd(), 'styles.css');
+    const cssContent = fs.readFileSync(cssPath, 'utf8');
+    res.type('text/css');
+    res.send(cssContent);
 });
 
 app.get('/script.js', (req, res) => {
-    console.log('script.js route hit');
-    try {
-        // Use process.cwd() as recommended by Vercel
-        const jsPath = path.join(process.cwd(), 'script.js');
-        console.log('Reading JS from:', jsPath);
-        
-        if (!fs.existsSync(jsPath)) {
-            console.error('script.js not found at:', jsPath);
-            return res.status(404).type('application/javascript').send('// JS file not found');
-        }
-        
-        const jsContent = fs.readFileSync(jsPath, 'utf8');
-        console.log('JS file read successfully, length:', jsContent.length);
-        res.type('application/javascript');
-        res.send(jsContent);
-    } catch (error) {
-        console.error('Error serving script.js:', error);
-        res.status(500).type('application/javascript').send('// Error loading JS');
-    }
+    const jsPath = path.join(process.cwd(), 'script.js');
+    const jsContent = fs.readFileSync(jsPath, 'utf8');
+    res.type('application/javascript');
+    res.send(jsContent);
 });
 
 // Serve images
 app.get('/images/:filename', (req, res) => {
-    try {
-        const filename = req.params.filename;
-        // Use process.cwd() as recommended by Vercel
-        const imagePath = path.join(process.cwd(), 'images', filename);
-        
-        if (!fs.existsSync(imagePath)) {
-            console.error('Image not found:', filename, 'at:', imagePath);
-            return res.status(404).send('Image not found');
-        }
-        
-        const ext = path.extname(filename).toLowerCase();
-        const contentType = {
-            '.png': 'image/png',
-            '.jpg': 'image/jpeg',
-            '.jpeg': 'image/jpeg',
-            '.gif': 'image/gif',
-            '.svg': 'image/svg+xml',
-            '.ico': 'image/x-icon'
-        }[ext] || 'application/octet-stream';
-        
-        const imageContent = fs.readFileSync(imagePath);
-        res.type(contentType);
-        res.send(imageContent);
-    } catch (error) {
-        console.error('Error serving image:', error);
-        res.status(500).send('Error loading image');
-    }
+    const filename = req.params.filename;
+    const imagePath = path.join(process.cwd(), 'images', filename);
+    const ext = path.extname(filename).toLowerCase();
+    const contentType = {
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.svg': 'image/svg+xml',
+        '.ico': 'image/x-icon'
+    }[ext] || 'application/octet-stream';
+    
+    const imageContent = fs.readFileSync(imagePath);
+    res.type(contentType);
+    res.send(imageContent);
 });
 
 // Test route to verify routing works
